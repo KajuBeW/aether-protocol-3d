@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AETHER PROTOCOL // 3D Siber Taktik FPS</title>
+  <link rel="stylesheet" href="css/style.css?v=3" />
+
+  <!-- Three.js r160 + Post-Processing (UnrealBloom, ACES Filmic, PBR RoomEnvironment) -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="game-badge">AETHER ENGINE // WEBGL2 PBR</div>
+    <div class="game-title" style="font-size: 32px;">SİSTEMLER BAŞLATILIYOR</div>
+    <div class="loader-bar-track">
+      <div id="loader-bar-fill"></div>
+    </div>
+    <div id="loader-status" style="color:#8aa8c7; font-size:13px; letter-spacing:2px;">
+      PROSEDÜREL PBR DOKULAR VE GÖLGELENDİRİCİLER DERLENİYOR...
+    </div>
+  </div>
+
+  <!-- 3D WebGL Canvas Target -->
+  <div id="game-canvas-container"></div>
+
+  <!-- Screen FX & Scanlines -->
+  <div id="fx-overlay"></div>
+  <div id="scanlines"></div>
+  <div id="damage-indicator"></div>
+  <div id="floating-texts"></div>
+
+  <!-- ================= TACTICAL HUD ================= -->
+  <div id="hud">
+    <!-- Left Radar & Performance -->
+    <div id="radar-panel">
+      <canvas id="radar-canvas" width="152" height="152"></canvas>
+      <div id="fps-counter">60 FPS // ULTRA</div>
+    </div>
+
+    <!-- Top Center Match Telemetry & Boss Health -->
+    <div id="hud-top-center">
+      <div class="top-stats-bar">
+        <div class="stat-pill">
+          <span class="stat-label">DALGA</span>
+          <span class="stat-val" id="stat-wave">1</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-pill">
+          <span class="stat-label">TEHDİT</span>
+          <span class="stat-val" id="stat-enemies">0</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-pill">
+          <span class="stat-label">SKOR</span>
+          <span class="stat-val" id="stat-score">0</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-pill">
+          <span class="stat-label">KREDİ</span>
+          <span class="stat-val credits" id="stat-credits">100 ₵</span>
+        </div>
+      </div>
+
+      <div id="boss-bar-container">
+        <div class="boss-title">
+          <span id="boss-name">OMEGA COLOSSUS</span>
+          <span id="boss-hp-text">1200 / 1200</span>
+        </div>
+        <div class="boss-track">
+          <div id="boss-hp-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Right Combo & Killfeed -->
+    <div id="hud-top-right">
+      <div id="combo-box">
+        <div id="combo-mult">x1.50</div>
+        <div id="combo-label">KOMBO ÇARPANI</div>
+      </div>
+      <div id="killfeed"></div>
+    </div>
+
+    <!-- Center Wave Announcement -->
+    <div id="wave-banner">
+      <div id="wave-banner-title">DALGA 1 BAŞLADI</div>
+      <div id="wave-banner-sub">TÜM SİBER BİRİMLERİ İMHA ET</div>
+    </div>
+
+    <!-- Dynamic Crosshair & Hitmarker -->
+    <div id="crosshair-wrap">
+      <div id="crosshair-dot"></div>
+      <div class="ch-line ch-top"></div>
+      <div class="ch-line ch-bottom"></div>
+      <div class="ch-line ch-left"></div>
+      <div class="ch-line ch-right"></div>
+    </div>
+    <div id="hitmarker">
+      <div class="hm-bar hm-1"></div>
+      <div class="hm-bar hm-2"></div>
+      <div class="hm-bar hm-3"></div>
+      <div class="hm-bar hm-4"></div>
+    </div>
+    <div id="reload-hint">[R] ŞARJÖR DEĞİŞTİR</div>
+
+    <!-- Bottom Left Exo-Suit Vitals -->
+    <div id="hud-bottom-left">
+      <div class="vital-row">
+        <div class="vital-head" style="color:#00f0ff;">
+          <span>AETHER KALKANI</span>
+          <span id="shield-val">100</span>
+        </div>
+        <div class="vital-track">
+          <div id="shield-fill"></div>
+        </div>
+      </div>
+
+      <div class="vital-row">
+        <div class="vital-head" style="color:#00ff9d;">
+          <span>ZIRH BÜTÜNLÜĞÜ</span>
+          <span id="hp-val">100</span>
+        </div>
+        <div class="vital-track">
+          <div id="hp-fill"></div>
+        </div>
+      </div>
+
+      <div class="ability-subbars">
+        <div class="mini-bar-wrap">
+          <div class="mini-label">
+            <span>İTİCİ [C/Q]</span>
+            <span id="dash-val">3/3</span>
+          </div>
+          <div class="mini-track"><div id="dash-fill"></div></div>
+        </div>
+        <div class="mini-bar-wrap">
+          <div class="mini-label">
+            <span>ZAMAN [F]</span>
+            <span id="overdrive-val">100%</span>
+          </div>
+          <div class="mini-track"><div id="overdrive-fill"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Center Tactical Equipment -->
+    <div id="hud-bottom-center">
+      <div class="ability-chip">
+        <span class="key-badge">G</span>
+        <span>BOMBA: <strong id="grenade-count">3</strong></span>
+      </div>
+      <div class="ability-chip">
+        <span class="key-badge">T</span>
+        <span>TARET: <strong id="turret-count">1</strong></span>
+      </div>
+      <div class="ability-chip" id="shop-chip">
+        <span class="key-badge">B</span>
+        <span>CEPHANELİK</span>
+      </div>
+    </div>
+
+    <!-- Bottom Right Weapon & Ammo -->
+    <div id="hud-bottom-right">
+      <div class="weapon-header">
+        <span style="font-size:11px; color:#8aa8c7; letter-spacing:1.5px;">AKTİF SİLAH</span>
+        <span id="weapon-name">VORTEX AR-9</span>
+      </div>
+      <div id="ammo-display">
+        <span id="ammo-mag">32</span>
+        <span id="ammo-reserve">/ ∞</span>
+      </div>
+      <div class="weapon-slots">
+        <div class="w-slot active" id="w-slot-0">1 // AR-9</div>
+        <div class="w-slot" id="w-slot-1">2 // SG-4</div>
+        <div class="w-slot" id="w-slot-2">3 // RAIL</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN MENU ================= -->
+  <div class="modal-backdrop active" id="main-menu">
+    <div class="menu-card">
+      <div class="game-badge">PBR IŞIKLANDIRMA // UNREAL BLOOM // TAKTİK EXO-FPS</div>
+      <h1 class="game-title">AETHER PROTOCOL</h1>
+      <p class="game-subtitle">
+        Yağmurlu siber kalede Exo-Zırhını kuşan, 3 farklı enerji silahı, zaman yavaşlatma (Bullet-Time),
+        çift zıplama, kayma ve otonom taretlerle zırhlı düşman dalgalarına ve Omega Titan'a karşı hayatta kal.
+      </p>
+
+      <div class="menu-grid">
+        <div class="panel-box">
+          <div class="panel-title">KONTROLLER VE MEKANİKLER</div>
+          <div class="controls-list">
+            <div class="ctrl-item"><span>Hareket / Koşu</span><span class="ctrl-key">WASD + SHIFT</span></div>
+            <div class="ctrl-item"><span>Ateş / Nişan (ADS)</span><span class="ctrl-key">SOL / SAĞ TIK</span></div>
+            <div class="ctrl-item"><span>Çift Zıplama</span><span class="ctrl-key">SPACE (x2)</span></div>
+            <div class="ctrl-item"><span>Kayma / Hava Atılması</span><span class="ctrl-key">C / CTRL / Q</span></div>
+            <div class="ctrl-item"><span>Zaman Yavaşlatma</span><span class="ctrl-key">F veya E</span></div>
+            <div class="ctrl-item"><span>Plazma El Bombası</span><span class="ctrl-key">G</span></div>
+            <div class="ctrl-item"><span>Otonom Lazer Taret</span><span class="ctrl-key">T</span></div>
+            <div class="ctrl-item"><span>Silah Değiştir</span><span class="ctrl-key">1 - 2 - 3 / TEKER</span></div>
+            <div class="ctrl-item"><span>Şarjör Yenile</span><span class="ctrl-key">R</span></div>
+            <div class="ctrl-item"><span>Cephanelik / Yükseltme</span><span class="ctrl-key">B veya TAB</span></div>
+          </div>
+        </div>
+
+        <div class="panel-box">
+          <div class="panel-title">GRAFİK VE SİSTEM AYARLARI</div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <span>Grafik Kalitesi (PBR &amp; Gölge)</span>
+            </div>
+            <div class="quality-btns">
+              <button class="q-btn active" data-quality="ultra">ULTRA</button>
+              <button class="q-btn" data-quality="high">YÜKSEK</button>
+              <button class="q-btn" data-quality="medium">ORTA</button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <span>Fare Hassasiyeti</span>
+              <span id="sens-val">1.0x</span>
+            </div>
+            <input type="range" id="sens-slider" min="0.3" max="2.5" step="0.1" value="1.0" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <span>Ses Seviyesi (Web Audio Reverb)</span>
+              <span id="vol-val">75%</span>
+            </div>
+            <input type="range" id="vol-slider" min="0" max="1" step="0.05" value="0.75" />
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="cyber-btn" id="btn-start-game">OPERASYONU BAŞLAT</button>
+        <span style="font-size:13px; color:#8aa8c7;">
+          İpucu: Düşmanların parlayan kırmızı/altın çekirdeklerine nişan alarak <strong>Kritik Hasar</strong> ver!
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PAUSE MENU ================= -->
+  <div class="modal-backdrop" id="pause-menu">
+    <div class="menu-card" style="max-width: 520px; text-align: center;">
+      <div class="game-badge">SİSTEM DURAKLATILDI</div>
+      <h2 class="game-title" style="font-size: 32px; margin-bottom: 18px;">OPERASYON BEKLEMEDE</h2>
+      <p class="game-subtitle" style="margin: 0 auto 24px;">
+        Savaşa geri dönmek, kredi harcayarak zırhını güçlendirmek veya operasyonu sıfırlamak için seçim yap.
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <button class="cyber-btn" id="btn-resume">SAVAŞA DEVAM ET</button>
+        <button class="cyber-btn secondary" id="btn-open-shop-pause">CEPHANELİK &amp; YÜKSELTME [B]</button>
+        <button class="cyber-btn secondary" id="btn-restart-pause">YENİDEN BAŞLAT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ARMORY / UPGRADE SHOP ================= -->
+  <div class="modal-backdrop" id="shop-modal">
+    <div class="menu-card">
+      <div class="shop-header">
+        <div>
+          <div class="game-badge" style="margin-bottom:4px;">TAKTİK TERMİNAL</div>
+          <h2 class="game-title" style="font-size: 28px; margin-bottom:0;">EXO-ZIRH CEPHANELİĞİ</h2>
+        </div>
+        <div class="credits-Readout" id="shop-credits">100 ₵</div>
+      </div>
+
+      <div class="shop-grid" id="shop-grid"></div>
+
+      <div class="btn-row" style="justify-content: space-between;">
+        <span style="color:#8aa8c7; font-size:13px;">Kapatmak ve savaşa dönmek için <strong>[B]</strong> veya <strong>SAVAŞA DÖN</strong> butonuna bas.</span>
+        <button class="cyber-btn" id="btn-close-shop">SAVAŞA DÖN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= GAME OVER MODAL ================= -->
+  <div class="modal-backdrop" id="gameover-modal">
+    <div class="menu-card" style="max-width: 580px; text-align: center;">
+      <div class="game-badge" style="border-color:#ff2a55; color:#ff6482;">ZIRH BÜTÜNLÜĞÜ ÇÖKTÜ</div>
+      <h2 class="game-title" id="go-title" style="font-size: 36px;">OPERASYON SONLANDI</h2>
+      <p class="game-subtitle" style="margin: 0 auto 22px;">
+        Siber savunma hattında üstün bir direniş gösterdin. Taktik kayıtların aşağıda özetlendi:
+      </p>
+
+      <div class="panel-box" style="margin-bottom: 24px;">
+        <div class="controls-list" style="font-size: 16px; gap: 12px 24px;">
+          <div class="ctrl-item"><span>Ulaşılan Dalga</span><span class="ctrl-key" id="go-wave">1</span></div>
+          <div class="ctrl-item"><span>İmha Edilen Birim</span><span class="ctrl-key" id="go-kills">0</span></div>
+          <div class="ctrl-item"><span>Kritik Zayıf Nokta</span><span class="ctrl-key" id="go-crits">0</span></div>
+          <div class="ctrl-item"><span>Toplam Skor</span><span class="ctrl-key" id="go-score">0</span></div>
+        </div>
+      </div>
+
+      <button class="cyber-btn" id="btn-play-again">YENİDEN KUŞAN VE BAŞLA</button>
+    </div>
+  </div>
+
+  <!-- Modular Classic Scripts (Works seamlessly on both file:// and http://!) -->
+  <script src="js/audio.js?v=3"></script>
+  <script src="js/textures.js?v=3"></script>
+  <script src="js/world.js?v=3"></script>
+  <script src="js/weapons.js?v=3"></script>
+  <script src="js/enemies.js?v=3"></script>
+  <script src="js/game.js?v=3"></script>
+
+  <!-- Bootstrapper Module -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+    window.addEventListener('DOMContentLoaded', () => {
+      window.aetherGame = new window.AetherGame({
+        THREE,
+        EffectComposer,
+        RenderPass,
+        UnrealBloomPass,
+        OutputPass,
+        RoomEnvironment
+      });
+    });
+
+    // If DOMContentLoaded already fired before module resolved, initialize immediately
+    if (document.readyState === 'interactive' || document.readyState === 'complete') {
+      if (!window.aetherGame) {
+        window.aetherGame = new window.AetherGame({
+          THREE,
+          EffectComposer,
+          RenderPass,
+          UnrealBloomPass,
+          OutputPass,
+          RoomEnvironment
+        });
+      }
+    }
+  </script>
+</body>
+</html>
